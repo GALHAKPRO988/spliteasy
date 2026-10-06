@@ -34,7 +34,10 @@ const groupSchema = z
     }
   });
 
-export const listGroups = createServerFn({ method: "GET" }).handler(async () => db.list());
+// Only returns the groups whose ids the device already knows (stored in the browser).
+export const listGroups = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({ ids: z.array(id).max(500) }).parse(d))
+  .handler(async ({ data }) => db.listByIds(data.ids));
 
 export const saveGroup = createServerFn({ method: "POST" })
   .inputValidator((d) => groupSchema.parse(d))

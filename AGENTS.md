@@ -10,5 +10,6 @@
 <!-- LOVABLE:END -->
 
 ## Architecture
-- Data lives in a single JSON file via `src/lib/db.server.ts`, accessed only through server functions in `src/lib/groups.functions.ts` — keeps self-hosting dependency-free (no external DB).
+- `src/lib/db.server.ts` stores groups in the Cloud `groups` table (server-only, service role) when SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY exist, else a JSON file in DATA_DIR — self-hosting stays dependency-free. Access only via `src/lib/groups.functions.ts`.
+- No accounts: each device keeps its group ids in localStorage and lists only those; opening a group link adds it — privacy without login.
 - Self-hosting builds with `NITRO_PRESET=node-server` (see Dockerfile) — the default build targets the edge, which has no persistent disk.

@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Plus, X, Pencil, Trash2, Copy, Share2, Check, ArrowRight, RotateCcw } from "lucide-react";
 import { useGroups, uid, today, eur, computeBalances, computeTransfers, type Group, type Expense } from "@/lib/splits";
 
@@ -17,8 +17,10 @@ export const Route = createFileRoute("/grupo/$id")({
 
 function GroupPage() {
   const { id } = Route.useParams();
-  const { groups, save, remove } = useGroups();
+  const { groups, save, remove, track } = useGroups();
   const nav = useNavigate();
+  // Opening a shared link adds the group to this device's list.
+  useEffect(() => { track(id); }, [id, track]);
   if (!groups) return <main className="p-10 text-center text-muted-foreground">Cargando…</main>;
   const g = groups.find((x) => x.id === id);
   if (!g)
