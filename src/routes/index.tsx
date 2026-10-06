@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { Plus, Users, Receipt, ArrowRightLeft, ChevronRight } from "lucide-react";
+import { Plus, Users, Receipt, ArrowRightLeft, ChevronRight, Github } from "lucide-react";
 import { useGroups, uid, eur } from "@/lib/splits";
 
 export const Route = createFileRoute("/")({
@@ -48,7 +48,7 @@ function Home() {
           </form>
         ) : (
           <button onClick={() => setOpen(true)} className="btn btn-primary w-full py-5 text-xl">
-            <Plus className="h-6 w-6" /> Nuevo grupo
+            <Plus className="h-6 w-6" /> Crear grupo
           </button>
         )}
       </div>
@@ -86,7 +86,14 @@ function Home() {
           ))}
         </ol>
       </section>
-      <p className="mt-10 text-center text-xs text-muted-foreground">Tus datos se guardan solo en este dispositivo.</p>
+      <section className="mt-10 rounded-2xl border border-dashed border-primary/40 p-5">
+        <div className="flex items-center gap-2 font-semibold text-primary"><Github className="h-5 w-5" />Open source y selfhosteable</div>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Sin cuentas, sin anuncios, sin servicios externos. Instálalo en tu propio servidor con un solo
+          <code className="mx-1 rounded bg-secondary px-1.5 py-0.5 text-xs">docker compose up -d</code>
+          y tus datos se quedan contigo.
+        </p>
+      </section>
     </main>
   );
 }
