@@ -1,3 +1,4 @@
+import logo from "@/assets/logo.png";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { Plus, Users, Receipt, ArrowRightLeft, ChevronRight, Github } from "lucide-react";
@@ -36,7 +37,7 @@ function Home() {
   return (
     <main className="mx-auto max-w-xl px-5 py-12 sm:py-20">
       <p className="text-sm font-semibold uppercase tracking-widest text-accent">Cuentas claras</p>
-      <h1 className="mt-2 text-6xl font-extrabold text-primary sm:text-7xl">SplitEasy</h1>
+      <h1 className="mt-2"><img src={logo} alt="SplitEasy" className="h-28 w-auto sm:h-36" /></h1>
       <p className="mt-4 text-lg text-muted-foreground">Divide cualquier gasto entre amigos en segundos. Nosotros hacemos las cuentas.</p>
 
       <div className="mt-8">
