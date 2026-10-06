@@ -8,3 +8,7 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+## Architecture
+- Data lives in a single JSON file via `src/lib/db.server.ts`, accessed only through server functions in `src/lib/groups.functions.ts` — keeps self-hosting dependency-free (no external DB).
+- Self-hosting builds with `NITRO_PRESET=node-server` (see Dockerfile) — the default build targets the edge, which has no persistent disk.

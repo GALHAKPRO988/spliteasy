@@ -1,0 +1,13 @@
+services:
+  spliteasy:
+    build: .
+    image: spliteasy:latest
+    container_name: spliteasy
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATA_DIR: /data
+    ports:
+      - "${PORT:-3000}:3000"
+    volumes:
+      - ./data:/data

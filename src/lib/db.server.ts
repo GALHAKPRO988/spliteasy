@@ -23,6 +23,7 @@ async function load(): Promise<Group[]> {
   } catch {
     cache = [];
   }
+  if (cache!.length === 0 && process.env.SEED_DEMO === "true") cache!.push(demoGroup());
   return cache!;
 }
 
@@ -65,3 +66,22 @@ export const db = {
       await persist();
     }),
 };
+
+function demoGroup(): Group {
+  const d = new Date().toISOString().slice(0, 10);
+  return {
+    id: "demogroup1",
+    name: "Cena de ejemplo",
+    createdAt: Date.now(),
+    people: [
+      { id: "alexdemo", name: "Alex" },
+      { id: "mariademo", name: "María" },
+      { id: "pablodemo", name: "Pablo" },
+    ],
+    expenses: [
+      { id: "cenademo", concept: "Cena", amount: 60, paidBy: "alexdemo", splitAmong: ["alexdemo", "mariademo", "pablodemo"], date: d },
+      { id: "entradasdemo", concept: "Entradas", amount: 30, paidBy: "mariademo", splitAmong: ["alexdemo", "mariademo", "pablodemo"], date: d },
+    ],
+    settled: [],
+  };
+}
