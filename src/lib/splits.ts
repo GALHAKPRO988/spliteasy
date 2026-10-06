@@ -1,36 +1,44 @@
-import { useEffect, useState, useCallback } from "react";
+import { useCallback } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { listGroups, saveGroup, deleteGroup } from "./groups.functions";
 
-export type Expense = { id: string; concept: string; amount: number; paidBy: string; splitAmong: string[] };
+export type Expense = { id: string; concept: string; amount: number; paidBy: string; splitAmong: string[]; date: string };
 export type Group = { id: string; name: string; people: { id: string; name: string }[]; expenses: Expense[]; settled: string[]; createdAt: number };
 
-const KEY = "spliteasy:groups";
-export const uid = () => Math.random().toString(36).slice(2, 10);
+export const uid = () =>
+  Array.from(crypto.getRandomValues(new Uint8Array(8)), (b: number) => (b % 36).toString(36)).join("");
+export const today = () => new Date().toISOString().slice(0, 10);
 
-function readAll(): Group[] {
-  try { return JSON.parse(localStorage.getItem(KEY) || "[]"); } catch { return []; }
-}
-function writeAll(g: Group[]) {
-  localStorage.setItem(KEY, JSON.stringify(g));
-  window.dispatchEvent(new Event("spliteasy"));
-}
+const QK = ["groups"];
 
 export function useGroups() {
-  const [groups, setGroups] = useState<Group[] | null>(null);
-  useEffect(() => {
-    const load = () => setGroups(readAll());
-    load();
-    window.addEventListener("spliteasy", load);
-    window.addEventListener("storage", load);
-    return () => { window.removeEventListener("spliteasy", load); window.removeEventListener("storage", load); };
-  }, []);
-  const save = useCallback((g: Group) => {
-    const all = readAll();
-    const i = all.findIndex((x) => x.id === g.id);
-    if (i >= 0) all[i] = g; else all.unshift(g);
-    writeAll(all);
-  }, []);
-  const remove = useCallback((id: string) => writeAll(readAll().filter((g) => g.id !== id)), []);
-  return { groups, save, remove };
+  const qc = useQueryClient();
+  const list = useServerFn(listGroups);
+  const saveFn = useServerFn(saveGroup);
+  const delFn = useServerFn(deleteGroup);
+  const { data } = useQuery({ queryKey: QK, queryFn: () => list() });
+  const save = useCallback(
+    (g: Group) => {
+      qc.setQueryData<Group[]>(QK, (old = []) =>
+        old.some((x) => x.id === g.id) ? old.map((x) => (x.id === g.id ? g : x)) : [g, ...old],
+      );
+      return saveFn({ data: g }).catch((e) => {
+        alert("No se pudo guardar. Revisa los datos.");
+        console.error(e);
+        qc.invalidateQueries({ queryKey: QK });
+      });
+    },
+    [qc, saveFn],
+  );
+  const remove = useCallback(
+    (id: string) => {
+      qc.setQueryData<Group[]>(QK, (old = []) => old.filter((g) => g.id !== id));
+      return delFn({ data: { id } }).finally(() => qc.invalidateQueries({ queryKey: QK }));
+    },
+    [qc, delFn],
+  );
+  return { groups: data ?? null, save, remove };
 }
 
 export const eur = (n: number) =>
@@ -46,13 +54,13 @@ export function computeBalances(g: Group) {
     const cents = Math.round(e.amount * 100);
     const base = Math.floor(cents / among.length);
     let rest = cents - base * among.length;
-    paid[e.paidBy] += cents;
-    among.forEach((id) => { owed[id] += base + (rest > 0 ? 1 : 0); rest--; });
+    paid[e.paidBy] = (paid[e.paidBy] ?? 0) + cents;
+    among.forEach((id) => { owed[id] = (owed[id] ?? 0) + base + (rest > 0 ? 1 : 0); rest--; });
   }
   return g.people.map((p) => ({
     id: p.id, name: p.name,
-    paid: paid[p.id] / 100, owed: owed[p.id] / 100,
-    balance: (paid[p.id] - owed[p.id]) / 100,
+    paid: paid[p.id]! / 100, owed: owed[p.id]! / 100,
+    balance: (paid[p.id]! - owed[p.id]!) / 100,
   }));
 }
 
@@ -71,7 +79,7 @@ export function computeTransfers(g: Group): Transfer[] {
   debtors.sort((a, z) => z.c - a.c); creditors.sort((a, z) => z.c - a.c);
   let i = 0, j = 0;
   while (i < debtors.length && j < creditors.length) {
-    const d = debtors[i], c = creditors[j];
+    const d = debtors[i]!, c = creditors[j]!;
     if (d.c === 0) { i++; continue; }
     if (c.c === 0) { j++; continue; }
     const m = Math.min(d.c, c.c);

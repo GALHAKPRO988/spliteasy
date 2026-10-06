@@ -1,0 +1,10 @@
+node_modules
+.output
+dist
+data
+.env
+.git
+.lovable
+.workspace
+.wrangler
+.tanstack

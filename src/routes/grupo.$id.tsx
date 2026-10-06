@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { ArrowLeft, Plus, X, Pencil, Trash2, Copy, Share2, Check, ArrowRight, RotateCcw } from "lucide-react";
-import { useGroups, uid, eur, computeBalances, computeTransfers, type Group, type Expense } from "@/lib/splits";
+import { useGroups, uid, today, eur, computeBalances, computeTransfers, type Group, type Expense } from "@/lib/splits";
 
 export const Route = createFileRoute("/grupo/$id")({
   head: () => ({
@@ -70,7 +70,7 @@ function GroupView({ g, save, onDelete }: { g: Group; save: (g: Group) => void; 
     <main className="mx-auto max-w-xl px-4 pb-32 pt-6">
       <Link to="/" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" />Inicio</Link>
       <h1 className="mt-3 text-4xl font-extrabold text-primary">{g.name}</h1>
-      <p className="text-muted-foreground">Total gastado: <span className="font-semibold text-foreground">{eur(total)}</span></p>
+      <p className="text-muted-foreground">{g.people.length} participantes · Total gastado: <span className="font-semibold text-foreground">{eur(total)}</span></p>
 
       {/* People */}
       <section className="card mt-6 p-4">
@@ -95,12 +95,12 @@ function GroupView({ g, save, onDelete }: { g: Group; save: (g: Group) => void; 
         <h2 className="mb-3 text-lg font-semibold">Gastos</h2>
         {!g.expenses.length && <p className="rounded-2xl bg-secondary p-4 text-sm text-muted-foreground">Aún no hay gastos.</p>}
         <div className="flex flex-col gap-2">
-          {g.expenses.map((e) => (
+          {[...g.expenses].sort((a, b) => (b.date ?? "").localeCompare(a.date ?? "")).map((e) => (
             <div key={e.id} className="card flex items-center gap-3 p-4">
               <div className="min-w-0 flex-1">
                 <div className="truncate font-semibold">{e.concept}</div>
                 <div className="text-sm text-muted-foreground">
-                  {names[e.paidBy]} pagó · {e.splitAmong.length === g.people.length ? "entre todos" : e.splitAmong.map((x) => names[x]).join(", ")}
+                  {e.date ? new Date(e.date + "T00:00").toLocaleDateString("es-ES", { day: "numeric", month: "short" }) + " · " : ""}{names[e.paidBy]} pagó · {e.splitAmong.length === g.people.length ? "entre todos" : e.splitAmong.map((x) => names[x]).join(", ")}
                 </div>
               </div>
               <div className="font-display text-lg font-extrabold">{eur(e.amount)}</div>
@@ -207,16 +207,17 @@ function ExpenseForm({ g, initial, onClose, onSave }: { g: Group; initial: Expen
   const [concept, setConcept] = useState(initial?.concept ?? "");
   const [amount, setAmount] = useState(initial ? String(initial.amount) : "");
   const [paidBy, setPaidBy] = useState(initial?.paidBy ?? g.people[0]?.id ?? "");
+  const [date, setDate] = useState(initial?.date ?? today());
   const [among, setAmong] = useState<string[]>(initial?.splitAmong ?? g.people.map((p) => p.id));
   const num = parseFloat(amount.replace(",", "."));
-  const valid = concept.trim() && num > 0 && paidBy && among.length > 0;
+  const valid = !!date && concept.trim() && num > 0 && paidBy && among.length > 0;
   const allOn = among.length === g.people.length;
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/40 sm:items-center" onClick={onClose}>
       <form
         onClick={(e) => e.stopPropagation()}
-        onSubmit={(e) => { e.preventDefault(); if (valid) onSave({ id: initial?.id ?? uid(), concept: concept.trim(), amount: Math.round(num * 100) / 100, paidBy, splitAmong: among }); }}
+        onSubmit={(e) => { e.preventDefault(); if (valid) onSave({ id: initial?.id ?? uid(), concept: concept.trim(), amount: Math.round(num * 100) / 100, paidBy, splitAmong: among, date }); }}
         className="max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-t-3xl bg-card p-5 sm:rounded-3xl"
       >
         <div className="mb-4 flex items-center justify-between">
@@ -231,6 +232,10 @@ function ExpenseForm({ g, initial, onClose, onSave }: { g: Group; initial: Expen
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">€</span>
             </div>
           </div>
+          <label className="flex flex-col gap-1 text-sm font-medium">
+            Fecha
+            <input type="date" className="field" value={date} onChange={(e) => setDate(e.target.value)} />
+          </label>
           <div>
             <div className="mb-2 text-sm font-medium">Pagado por</div>
             <div className="flex flex-wrap gap-2">
