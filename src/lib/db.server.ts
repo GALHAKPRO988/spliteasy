@@ -10,7 +10,7 @@ let queue: Promise<unknown> = Promise.resolve();
 let persistent = true;
 
 function file() {
-  const dir = process.env.DATA_DIR || "./data";
+  const dir = process.env["DATA_DIR"] || "./data";
   return { dir, file: path.join(dir, "spliteasy.json") };
 }
 
@@ -23,7 +23,7 @@ async function load(): Promise<Group[]> {
   } catch {
     cache = [];
   }
-  if (cache!.length === 0 && process.env.SEED_DEMO === "true") cache!.push(demoGroup());
+  if (cache!.length === 0 && process.env["SEED_DEMO"] === "true") cache!.push(demoGroup());
   return cache!;
 }
 

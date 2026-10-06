@@ -59,8 +59,8 @@ export function computeBalances(g: Group) {
   }
   return g.people.map((p) => ({
     id: p.id, name: p.name,
-    paid: paid[p.id] / 100, owed: owed[p.id] / 100,
-    balance: (paid[p.id] - owed[p.id]) / 100,
+    paid: paid[p.id]! / 100, owed: owed[p.id]! / 100,
+    balance: (paid[p.id]! - owed[p.id]!) / 100,
   }));
 }
 
