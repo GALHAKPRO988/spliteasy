@@ -11,15 +11,33 @@ export const uid = () =>
 export const today = () => new Date().toISOString().slice(0, 10);
 
 const QK = ["groups"];
+const LS = "spliteasy:groups";
+
+// Group ids this device has created or opened. Only these are listed.
+function myIds(): string[] {
+  try { return JSON.parse(localStorage.getItem(LS) || "[]"); } catch { return []; }
+}
+function setIds(ids: string[]) {
+  localStorage.setItem(LS, JSON.stringify([...new Set(ids)]));
+}
 
 export function useGroups() {
   const qc = useQueryClient();
   const list = useServerFn(listGroups);
   const saveFn = useServerFn(saveGroup);
   const delFn = useServerFn(deleteGroup);
-  const { data } = useQuery({ queryKey: QK, queryFn: () => list() });
+  const { data } = useQuery({ queryKey: QK, queryFn: () => list({ data: { ids: myIds() } }) });
+  const track = useCallback(
+    (id: string) => {
+      if (myIds().includes(id)) return;
+      setIds([...myIds(), id]);
+      qc.invalidateQueries({ queryKey: QK });
+    },
+    [qc],
+  );
   const save = useCallback(
     (g: Group) => {
+      if (!myIds().includes(g.id)) setIds([...myIds(), g.id]);
       qc.setQueryData<Group[]>(QK, (old = []) =>
         old.some((x) => x.id === g.id) ? old.map((x) => (x.id === g.id ? g : x)) : [g, ...old],
       );
@@ -33,12 +51,13 @@ export function useGroups() {
   );
   const remove = useCallback(
     (id: string) => {
+      setIds(myIds().filter((x) => x !== id));
       qc.setQueryData<Group[]>(QK, (old = []) => old.filter((g) => g.id !== id));
       return delFn({ data: { id } }).finally(() => qc.invalidateQueries({ queryKey: QK }));
     },
     [qc, delFn],
   );
-  return { groups: data ?? null, save, remove };
+  return { groups: data ?? null, save, remove, track };
 }
 
 export const eur = (n: number) =>

@@ -1,10 +1,51 @@
-// Tiny file-based database: all groups live in one JSON file inside DATA_DIR.
-// No external services, no native dependencies. Writes are atomic (tmp + rename)
-// and serialised through a queue so concurrent requests never corrupt the file.
+// Storage for groups. Two backends, chosen at runtime:
+// - Cloud database, when SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY are set.
+// - A single JSON file inside DATA_DIR otherwise (zero-dependency self-hosting).
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import type { Group } from "./splits";
 
+type Store = {
+  listByIds: (ids: string[]) => Promise<Group[]>;
+  get: (id: string) => Promise<Group | null>;
+  upsert: (g: Group) => Promise<Group>;
+  remove: (id: string) => Promise<void>;
+};
+
+const useCloud = () => !!process.env["SUPABASE_URL"] && !!process.env["SUPABASE_SERVICE_ROLE_KEY"];
+const sortNewest = (gs: Group[]) => gs.sort((a, b) => b.createdAt - a.createdAt);
+
+// ---------- Cloud ----------
+const cloud: Store = {
+  async listByIds(ids) {
+    if (!ids.length) return [];
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data, error } = await supabaseAdmin.from("groups").select("data").in("id", ids);
+    if (error) throw new Error(error.message);
+    return sortNewest(data.map((r) => r.data as unknown as Group));
+  },
+  async get(id) {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data, error } = await supabaseAdmin.from("groups").select("data").eq("id", id).maybeSingle();
+    if (error) throw new Error(error.message);
+    return (data?.data as unknown as Group) ?? null;
+  },
+  async upsert(g) {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
+      .from("groups")
+      .upsert({ id: g.id, data: g as never, created_at: g.createdAt, updated_at: new Date().toISOString() });
+    if (error) throw new Error(error.message);
+    return g;
+  },
+  async remove(id) {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.from("groups").delete().eq("id", id);
+    if (error) throw new Error(error.message);
+  },
+};
+
+// ---------- File ----------
 let cache: Group[] | null = null;
 let queue: Promise<unknown> = Promise.resolve();
 let persistent = true;
@@ -17,8 +58,7 @@ function file() {
 async function load(): Promise<Group[]> {
   if (cache) return cache;
   try {
-    const raw = await fs.readFile(file().file, "utf8");
-    const parsed = JSON.parse(raw);
+    const parsed = JSON.parse(await fs.readFile(file().file, "utf8"));
     cache = Array.isArray(parsed.groups) ? parsed.groups : [];
   } catch {
     cache = [];
@@ -32,11 +72,9 @@ async function persist() {
   try {
     const { dir, file: f } = file();
     await fs.mkdir(dir, { recursive: true });
-    const tmp = `${f}.tmp`;
-    await fs.writeFile(tmp, JSON.stringify({ version: 1, groups: cache }, null, 2));
-    await fs.rename(tmp, f);
+    await fs.writeFile(`${f}.tmp`, JSON.stringify({ version: 1, groups: cache }, null, 2));
+    await fs.rename(`${f}.tmp`, f);
   } catch (e) {
-    // Runtimes without a writable disk (e.g. hosted preview) keep data in memory.
     persistent = false;
     console.warn("[spliteasy] data dir not writable, using in-memory store", e);
   }
@@ -48,10 +86,10 @@ function serial<T>(fn: () => Promise<T>): Promise<T> {
   return run;
 }
 
-export const db = {
-  list: () => serial(async () => [...(await load())].sort((a, b) => b.createdAt - a.createdAt)),
-  get: (id: string) => serial(async () => (await load()).find((g) => g.id === id) ?? null),
-  upsert: (g: Group) =>
+const local: Store = {
+  listByIds: (ids) => serial(async () => sortNewest((await load()).filter((g) => ids.includes(g.id)))),
+  get: (id) => serial(async () => (await load()).find((g) => g.id === id) ?? null),
+  upsert: (g) =>
     serial(async () => {
       const all = await load();
       const i = all.findIndex((x) => x.id === g.id);
@@ -60,11 +98,18 @@ export const db = {
       await persist();
       return g;
     }),
-  remove: (id: string) =>
+  remove: (id) =>
     serial(async () => {
       cache = (await load()).filter((g) => g.id !== id);
       await persist();
     }),
+};
+
+export const db: Store = {
+  listByIds: (ids) => (useCloud() ? cloud : local).listByIds(ids),
+  get: (id) => (useCloud() ? cloud : local).get(id),
+  upsert: (g) => (useCloud() ? cloud : local).upsert(g),
+  remove: (id) => (useCloud() ? cloud : local).remove(id),
 };
 
 function demoGroup(): Group {
