@@ -6,10 +6,14 @@
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
+// `bun run build:apk` builds a static single-page app for Capacitor (see docs/APK.md).
+const apk = process.env["SPLITEASY_APK"] === "1";
+
 export default defineConfig({
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
     // nitro/vite builds from this
     server: { entry: "server" },
+    ...(apk ? { spa: { enabled: true, prerender: { outputPath: "/index.html" } } } : {}),
   },
 });
