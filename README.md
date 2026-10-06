@@ -4,33 +4,100 @@
 
 Crea un grupo, añade personas, apunta quién pagó qué… y SplitEasy te dice quién paga a quién, con el **mínimo número de transferencias**.
 
+## Cómo usar SplitEasy
+
+La forma principal de utilizar SplitEasy es **descargar el APK e instalarlo directamente en tu teléfono Android**.
+
+También puedes utilizar SplitEasy como aplicación web. Puedes desplegarla en un servidor y acceder a ella desde **cualquier dispositivo y desde cualquier lugar**, siempre que tengas acceso al servidor.
+
+```text
+                SplitEasy
+                   │
+        ┌──────────┴──────────┐
+        ↓                     ↓
+   APK Android            Aplicación web
+        ↓                     ↓
+     Teléfono          Cualquier dispositivo
+```
+
+El proyecto completo está disponible en GitHub.
+
 ![Inicio](docs/screenshot-home.png)
 ![Grupo](docs/screenshot-group.png)
 
-> _Capturas pendientes: añade tus imágenes en la carpeta `docs/`._
+> *Capturas pendientes: añade tus imágenes en la carpeta `docs/`.*
 
 ---
 
 ## Funcionalidades
 
-- Grupos con nombre y participantes (solo nombre, sin cuentas).
-- Gastos con concepto, importe, fecha, quién pagó y entre quiénes se divide (todos o algunos).
-- Editar y eliminar gastos. Eliminar personas sin gastos asociados.
-- Balance por persona: cuánto pagó, cuánto le tocaba y su saldo.
-- **Quién paga a quién**, simplificando deudas al máximo.
-- Marcar pagos como realizados, copiar y compartir el resumen.
-- Datos guardados en tu propio servidor, en un único archivo.
-- Diseño mobile-first.
+* Grupos con nombre y participantes (solo nombre, sin cuentas).
+* Gastos con concepto, importe, fecha, quién pagó y entre quiénes se divide (todos o algunos).
+* Editar y eliminar gastos.
+* Eliminar personas sin gastos asociados.
+* Balance por persona: cuánto pagó, cuánto le tocaba y su saldo.
+* **Quién paga a quién**, simplificando las deudas al máximo.
+* Marcar pagos como realizados.
+* Copiar y compartir el resumen.
+* Datos guardados en tu propio servidor, en un único archivo.
+* Diseño mobile-first.
+* Aplicación Android mediante APK.
+* Aplicación web accesible desde cualquier dispositivo.
 
-## ¿Por qué selfhostear SplitEasy?
+## ¿Por qué SplitEasy?
 
-Tus gastos dicen mucho de ti. Con SplitEasy los datos **se quedan en tu servidor**: no hay terceros, ni anuncios, ni analítica, ni cuentas obligatorias. Tampoco dependes de que un servicio externo siga existiendo o cambie sus precios.
+Los gastos de un grupo no deberían requerir una plataforma complicada.
+
+SplitEasy está pensado para ser **simple, ligero y transparente**. No necesitas crear cuentas para usarlo y no dependes de una plataforma externa para gestionar tus gastos.
+
+El proyecto es **open source** y su código está disponible públicamente en GitHub.
 
 ---
 
-## Instalación con Docker (recomendado)
+## Android
 
-Solo necesitas tener [Docker](https://docs.docker.com/get-docker/) instalado. No hace falta saber programar.
+La forma principal de utilizar SplitEasy es mediante su aplicación Android.
+
+El APK puede descargarse e instalarse directamente en un teléfono Android sin necesidad de publicar la aplicación en una tienda.
+
+El proyecto Android se encuentra en:
+
+```text
+android/
+```
+
+Para generar el APK a partir del proyecto:
+
+```bash
+npx vite build --config vite.config.capacitor.ts
+npx cap sync
+npx cap open android
+```
+
+Después puedes generar el APK desde Android Studio.
+
+La aplicación Android utiliza el mismo código de SplitEasy que la versión web.
+
+---
+
+## Aplicación web
+
+También puedes ejecutar SplitEasy como aplicación web y acceder a ella desde cualquier dispositivo.
+
+Esto permite utilizarla desde:
+
+* Ordenadores.
+* Teléfonos Android.
+* Tablets.
+* Otros dispositivos con un navegador web.
+
+Una vez desplegada en un servidor, puedes acceder a SplitEasy desde cualquier lugar donde ese servidor sea accesible.
+
+---
+
+## Instalación con Docker
+
+Solo necesitas tener [Docker](https://docs.docker.com/get-docker/) instalado.
 
 ```bash
 git clone https://github.com/TU-USUARIO/spliteasy.git
@@ -39,31 +106,45 @@ cp .env.example .env
 docker compose up -d
 ```
 
-Abre **http://localhost:3000** en tu navegador. ¡Listo!
+Abre:
 
-Para pararlo: `docker compose down`.
+```text
+http://localhost:3000
+```
+
+Para pararlo:
+
+```bash
+docker compose down
+```
 
 ### Variables de entorno
 
 Edita el archivo `.env`:
 
-| Variable    | Por defecto | Qué hace |
-|-------------|-------------|----------|
-| `PORT`      | `3000`      | Puerto en el que se abre la app. |
-| `DATA_DIR`  | `/data`     | Carpeta (dentro del contenedor) donde se guarda la base de datos. |
-| `SEED_DEMO` | `false`     | Si es `true`, crea un grupo de ejemplo la primera vez. |
+| Variable    | Por defecto | Qué hace                                                  |
+| ----------- | ----------- | --------------------------------------------------------- |
+| `PORT`      | `3000`      | Puerto en el que se abre la aplicación.                   |
+| `DATA_DIR`  | `/data`     | Carpeta dentro del contenedor donde se guardan los datos. |
+| `SEED_DEMO` | `false`     | Si es `true`, crea un grupo de ejemplo la primera vez.    |
 
-No hay secretos que configurar.
+No hay secretos obligatorios que configurar.
 
 ### Backup de los datos
 
-Todos los datos están en un único archivo: `./data/spliteasy.json`.
+Los datos se almacenan en un único archivo:
+
+```text
+./data/spliteasy.json
+```
+
+Para crear una copia de seguridad:
 
 ```bash
 cp data/spliteasy.json backup-$(date +%F).json
 ```
 
-Para restaurar: para la app, copia el archivo de vuelta a `data/spliteasy.json` y arráncala de nuevo.
+Para restaurar los datos, detén la aplicación, sustituye `data/spliteasy.json` por la copia de seguridad y vuelve a iniciarla.
 
 ### Actualizar
 
@@ -72,50 +153,78 @@ git pull
 docker compose up -d --build
 ```
 
-Tus datos en `./data` no se tocan.
+Los datos almacenados en `./data` no se eliminan.
 
 ---
 
-## Ejecutar en local (desarrollo)
+## Ejecutar en local
 
-Necesitas [Bun](https://bun.sh) (o Node 22 + npm).
+Para desarrollo necesitas [Bun](https://bun.sh) o Node.js con npm.
+
+Con Bun:
 
 ```bash
 bun install
 bun run dev
 ```
 
-Abre la URL que aparece en la terminal. Los datos se guardan en `./data/spliteasy.json`.
+Con npm:
 
-### Stack
-
-- [TanStack Start](https://tanstack.com/start) (React + server functions) y Tailwind CSS.
-- Base de datos: un archivo JSON con escrituras atómicas. Cero dependencias, cero servicios externos.
-- Validación de todos los datos en el servidor con Zod.
-
-Estructura principal:
-
+```bash
+npm install
+npm run dev
 ```
+
+Abre la URL que aparezca en la terminal.
+
+---
+
+## Stack
+
+* [TanStack Start](https://tanstack.com/start) (React + server functions).
+* [Tailwind CSS](https://tailwindcss.com/).
+* [Capacitor](https://capacitorjs.com/) para Android.
+* JSON como almacenamiento, con escrituras atómicas.
+* [Zod](https://zod.dev/) para la validación de datos en el servidor.
+
+### Estructura principal
+
+```text
 src/lib/splits.ts            cálculos de balances y transferencias
 src/lib/db.server.ts         almacenamiento en archivo
-src/lib/groups.functions.ts  API del servidor (con validación)
-src/routes/                  páginas
+src/lib/groups.functions.ts  API del servidor con validación
+src/routes/                  páginas de la aplicación
+android/                     proyecto Android de Capacitor
 ```
+
+---
 
 ## Seguridad
 
-- Sin autenticación en esta versión: cualquiera con acceso a tu servidor puede ver los grupos. Si lo expones a Internet, ponlo detrás de un proxy con contraseña (p. ej. Caddy o Nginx con basic auth) o de una VPN.
-- Todo lo que llega al servidor se valida (longitudes, importes, referencias).
-- Solo se guarda lo imprescindible: nombres, conceptos, importes y fechas.
-- El contenedor corre como usuario sin privilegios.
+* Esta versión no incluye autenticación.
+* Cualquiera con acceso al servidor puede ver los grupos.
+* Si expones SplitEasy a Internet, utiliza una capa adicional de protección, como un proxy con autenticación o una VPN.
+* Los datos recibidos por el servidor se validan.
+* Solo se almacena la información necesaria para gestionar los gastos.
+* El contenedor se ejecuta con un usuario sin privilegios.
+
+---
 
 ## Contribuir
 
-1. Haz un fork y crea una rama: `git checkout -b mi-mejora`.
-2. Mantén las cosas simples: pocas dependencias, código fácil de leer.
-3. Abre un Pull Request explicando el cambio.
+1. Haz un fork del repositorio.
+2. Crea una rama para tu cambio:
 
-Issues y sugerencias son bienvenidos.
+```bash
+git checkout -b mi-mejora
+```
+
+3. Mantén el proyecto simple y fácil de mantener.
+4. Abre un Pull Request explicando los cambios realizados.
+
+Los issues y las sugerencias son bienvenidos.
+
+---
 
 ## Licencia
 
