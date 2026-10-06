@@ -1,0 +1,6 @@
+{
+  "appId": "com.spliteasy.app",
+  "appName": "SplitEasy",
+  "webDir": "dist/client",
+  "android": { "allowMixedContent": false }
+}

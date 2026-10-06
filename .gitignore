@@ -34,3 +34,5 @@ dist-ssr
 # SplitEasy data
 data/
 .env
+.env.apk
+android/
