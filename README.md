@@ -8,6 +8,8 @@ Crea un grupo, añade personas, apunta quién pagó qué… y SplitEasy te dice 
 
 La forma principal de utilizar SplitEasy es **descargar el APK e instalarlo directamente en tu teléfono Android**.
 
+Las versiones disponibles de la aplicación se publican en **[GitHub Releases](../../releases)**, donde puedes descargar el APK de la versión que quieras.
+
 También puedes utilizar SplitEasy como aplicación web. Puedes desplegarla en un servidor y acceder a ella desde **cualquier dispositivo y desde cualquier lugar**, siempre que tengas acceso al servidor.
 
 ```text
@@ -58,7 +60,9 @@ El proyecto es **open source** y su código está disponible públicamente en Gi
 
 La forma principal de utilizar SplitEasy es mediante su aplicación Android.
 
-El APK puede descargarse e instalarse directamente en un teléfono Android sin necesidad de publicar la aplicación en una tienda.
+Las versiones oficiales del APK están disponibles en **[GitHub Releases](../../releases)**.
+
+Solo tienes que descargar el APK de la versión que quieras e instalarlo en tu teléfono Android.
 
 El proyecto Android se encuentra en:
 
