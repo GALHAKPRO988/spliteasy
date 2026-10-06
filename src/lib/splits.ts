@@ -2,6 +2,7 @@ import { useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { listGroups, saveGroup, deleteGroup } from "./groups.functions";
+import { direct, directMode } from "./direct";
 
 export type Expense = { id: string; concept: string; amount: number; paidBy: string; splitAmong: string[]; date: string };
 export type Group = { id: string; name: string; people: { id: string; name: string }[]; expenses: Expense[]; settled: string[]; createdAt: number };
@@ -23,9 +24,12 @@ function setIds(ids: string[]) {
 
 export function useGroups() {
   const qc = useQueryClient();
-  const list = useServerFn(listGroups);
-  const saveFn = useServerFn(saveGroup);
-  const delFn = useServerFn(deleteGroup);
+  const listS = useServerFn(listGroups);
+  const saveS = useServerFn(saveGroup);
+  const delS = useServerFn(deleteGroup);
+  const list = directMode ? (a: { data: { ids: string[] } }) => direct.list(a.data.ids) : listS;
+  const saveFn = directMode ? (a: { data: Group }) => direct.save(a.data) : saveS;
+  const delFn = directMode ? (a: { data: { id: string } }) => direct.remove(a.data.id) : delS;
   const { data } = useQuery({ queryKey: QK, queryFn: () => list({ data: { ids: myIds() } }) });
   const track = useCallback(
     (id: string) => {
