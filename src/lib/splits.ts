@@ -7,7 +7,7 @@ export type Expense = { id: string; concept: string; amount: number; paidBy: str
 export type Group = { id: string; name: string; people: { id: string; name: string }[]; expenses: Expense[]; settled: string[]; createdAt: number };
 
 export const uid = () =>
-  Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) => (b % 36).toString(36)).join("");
+  Array.from(crypto.getRandomValues(new Uint8Array(8)), (b: number) => (b % 36).toString(36)).join("");
 export const today = () => new Date().toISOString().slice(0, 10);
 
 const QK = ["groups"];
@@ -79,7 +79,7 @@ export function computeTransfers(g: Group): Transfer[] {
   debtors.sort((a, z) => z.c - a.c); creditors.sort((a, z) => z.c - a.c);
   let i = 0, j = 0;
   while (i < debtors.length && j < creditors.length) {
-    const d = debtors[i], c = creditors[j];
+    const d = debtors[i]!, c = creditors[j]!;
     if (d.c === 0) { i++; continue; }
     if (c.c === 0) { j++; continue; }
     const m = Math.min(d.c, c.c);
