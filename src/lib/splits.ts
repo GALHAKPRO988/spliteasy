@@ -54,8 +54,8 @@ export function computeBalances(g: Group) {
     const cents = Math.round(e.amount * 100);
     const base = Math.floor(cents / among.length);
     let rest = cents - base * among.length;
-    paid[e.paidBy] += cents;
-    among.forEach((id) => { owed[id] += base + (rest > 0 ? 1 : 0); rest--; });
+    paid[e.paidBy] = (paid[e.paidBy] ?? 0) + cents;
+    among.forEach((id) => { owed[id] = (owed[id] ?? 0) + base + (rest > 0 ? 1 : 0); rest--; });
   }
   return g.people.map((p) => ({
     id: p.id, name: p.name,
