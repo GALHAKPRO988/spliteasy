@@ -19,7 +19,7 @@ VITE_DIRECT_SUPABASE_KEY=sb_publishable_xxx   # la clave pública / anon, NUNCA 
 bun install
 bun run build:apk
 ```
-Genera la app en `.output/public` (con `index.html`).
+Genera la app en `dist/client` (con `index.html`).
 
 ## 4. Empaquetar con Capacitor
 Requisitos: Android Studio + JDK 17.
