@@ -24,11 +24,6 @@ También puedes utilizar SplitEasy como aplicación web. Puedes desplegarla en u
 
 El proyecto completo está disponible en GitHub.
 
-![Inicio](docs/screenshot-home.png)
-![Grupo](docs/screenshot-group.png)
-
-> *Capturas pendientes: añade tus imágenes en la carpeta `docs/`.*
-
 ---
 
 ## Funcionalidades
@@ -227,6 +222,9 @@ git checkout -b mi-mejora
 4. Abre un Pull Request explicando los cambios realizados.
 
 Los issues y las sugerencias son bienvenidos.
+---
+
+Se utilizó IA para desarrollar este proyecto. Recibió también cambios humanos. El código fue revisado por completo antes de subirse.
 
 ---
 
