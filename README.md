@@ -222,12 +222,13 @@ git checkout -b mi-mejora
 4. Abre un Pull Request explicando los cambios realizados.
 
 Los issues y las sugerencias son bienvenidos.
+
+## Licencia
+
+[MIT](LICENSE)
+
 ---
 
 Se utilizó IA para desarrollar este proyecto. Recibió también cambios humanos. El código fue revisado por completo antes de subirse.
 
 ---
-
-## Licencia
-
-[MIT](LICENSE)
