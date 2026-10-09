@@ -1,7 +1,9 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Plus, X, Pencil, Trash2, Copy, Share2, Check, ArrowRight, RotateCcw } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { ArrowLeft, Plus, X, Pencil, Trash2, Copy, Share2, Check, ArrowRight, RotateCcw, HandCoins, ScanLine, Loader2 } from "lucide-react";
 import { useGroups, uid, today, eur, computeBalances, computeTransfers, type Group, type Expense } from "@/lib/splits";
+import { scanReceipt } from "@/lib/scan.functions";
 
 export const Route = createFileRoute("/grupo/$id")({
   head: () => ({
@@ -36,6 +38,7 @@ function GroupPage() {
 function GroupView({ g, save, onDelete }: { g: Group; save: (g: Group) => void; onDelete: () => void }) {
   const [newPerson, setNewPerson] = useState("");
   const [editing, setEditing] = useState<Expense | "new" | null>(null);
+  const [debtOpen, setDebtOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const names = useMemo(() => Object.fromEntries(g.people.map((p) => [p.id, p.name])), [g.people]);
   const balances = computeBalances(g);
@@ -73,6 +76,10 @@ function GroupView({ g, save, onDelete }: { g: Group; save: (g: Group) => void; 
       <Link to="/" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" />Inicio</Link>
       <h1 className="mt-3 text-4xl font-extrabold text-primary">{g.name}</h1>
       <p className="text-muted-foreground">{g.people.length} participantes · Total gastado: <span className="font-semibold text-foreground">{eur(total)}</span></p>
+      <button disabled={g.people.length < 2} onClick={() => setDebtOpen(true)} className="btn btn-accent mt-4 w-full">
+        <HandCoins className="h-5 w-5" />Apuntar una deuda
+      </button>
+      {g.people.length < 2 && <p className="mt-1 text-center text-xs text-muted-foreground">Necesitas al menos 2 participantes para apuntar deudas</p>}
 
       {/* People */}
       <section className="card mt-6 p-4">
@@ -102,11 +109,14 @@ function GroupView({ g, save, onDelete }: { g: Group; save: (g: Group) => void; 
               <div className="min-w-0 flex-1">
                 <div className="truncate font-semibold">{e.concept}</div>
                 <div className="text-sm text-muted-foreground">
-                  {e.date ? new Date(e.date + "T00:00").toLocaleDateString("es-ES", { day: "numeric", month: "short" }) + " · " : ""}{names[e.paidBy]} pagó · {e.splitAmong.length === g.people.length ? "entre todos" : e.splitAmong.map((x) => names[x]).join(", ")}
+                  {e.date ? new Date(e.date + "T00:00").toLocaleDateString("es-ES", { day: "numeric", month: "short" }) + " · " : ""}
+                  {e.kind === "debt"
+                    ? `Deuda: ${names[e.splitAmong[0]!]} debe a ${names[e.paidBy]}`
+                    : `${names[e.paidBy]} pagó · ${e.splitAmong.length === g.people.length ? "entre todos" : e.splitAmong.map((x) => names[x]).join(", ")}`}
                 </div>
               </div>
               <div className="font-display text-lg font-extrabold">{eur(e.amount)}</div>
-              <button aria-label="Editar" onClick={() => setEditing(e)} className="p-1 text-muted-foreground hover:text-primary"><Pencil className="h-4 w-4" /></button>
+              {e.kind !== "debt" && <button aria-label="Editar" onClick={() => setEditing(e)} className="p-1 text-muted-foreground hover:text-primary"><Pencil className="h-4 w-4" /></button>}
               <button aria-label="Eliminar" onClick={() => confirm("¿Eliminar este gasto?") && save({ ...g, expenses: g.expenses.filter((x) => x.id !== e.id) })} className="p-1 text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></button>
             </div>
           ))}
