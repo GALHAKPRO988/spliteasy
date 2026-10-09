@@ -21,6 +21,7 @@ const groupSchema = z
           paidBy: id,
           splitAmong: z.array(id).min(1).max(100),
           date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+          kind: z.literal("debt").optional(),
         }),
       )
       .max(5000),
