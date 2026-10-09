@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { listGroups, saveGroup, deleteGroup } from "./groups.functions";
 import { direct, directMode } from "./direct";
 
-export type Expense = { id: string; concept: string; amount: number; paidBy: string; splitAmong: string[]; date: string };
+export type Expense = { id: string; concept: string; amount: number; paidBy: string; splitAmong: string[]; date: string; kind?: "debt" };
 export type Group = { id: string; name: string; people: { id: string; name: string }[]; expenses: Expense[]; settled: string[]; createdAt: number };
 
 export const uid = () =>
