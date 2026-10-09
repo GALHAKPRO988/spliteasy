@@ -211,7 +211,66 @@ function GroupView({ g, save, onDelete }: { g: Group; save: (g: Group) => void; 
           }}
         />
       )}
+
+      {debtOpen && (
+        <DebtForm g={g} onClose={() => setDebtOpen(false)}
+          onSave={(e) => { save({ ...g, expenses: [...g.expenses, e] }); setDebtOpen(false); }} />
+      )}
     </main>
+  );
+}
+
+// Resize a photo to a small JPEG data URL before sending it to the scanner.
+async function shrink(file: File): Promise<string> {
+  const bmp = await createImageBitmap(file);
+  const s = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+  const c = document.createElement("canvas");
+  c.width = Math.round(bmp.width * s); c.height = Math.round(bmp.height * s);
+  c.getContext("2d")!.drawImage(bmp, 0, 0, c.width, c.height);
+  return c.toDataURL("image/jpeg", 0.85);
+}
+
+// A debt "A owes B X€" is stored as an expense paid by B and split only to A.
+function DebtForm({ g, onClose, onSave }: { g: Group; onClose: () => void; onSave: (e: Expense) => void }) {
+  const [debtor, setDebtor] = useState(g.people[0]?.id ?? "");
+  const [creditor, setCreditor] = useState(g.people[1]?.id ?? "");
+  const [amount, setAmount] = useState("");
+  const [concept, setConcept] = useState("");
+  const num = parseFloat(amount.replace(",", "."));
+  const valid = debtor && creditor && debtor !== creditor && num > 0;
+  const Pick = ({ value, set, label }: { value: string; set: (v: string) => void; label: string }) => (
+    <div>
+      <div className="mb-2 text-sm font-medium">{label}</div>
+      <div className="flex flex-wrap gap-2">
+        {g.people.map((p) => <button type="button" key={p.id} data-on={value === p.id} onClick={() => set(p.id)} className="chip">{p.name}</button>)}
+      </div>
+    </div>
+  );
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/40 sm:items-center" onClick={onClose}>
+      <form onClick={(e) => e.stopPropagation()}
+        onSubmit={(e) => { e.preventDefault(); if (valid) onSave({ id: uid(), kind: "debt", concept: concept.trim() || "Deuda", amount: Math.round(num * 100) / 100, paidBy: creditor, splitAmong: [debtor], date: today() }); }}
+        className="max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-t-3xl bg-card p-5 sm:rounded-3xl">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-2xl font-extrabold">Apuntar una deuda</h2>
+          <button type="button" onClick={onClose} aria-label="Cerrar" className="p-1 text-muted-foreground"><X className="h-5 w-5" /></button>
+        </div>
+        <div className="flex flex-col gap-4">
+          <Pick label="¿Quién debe?" value={debtor} set={setDebtor} />
+          <Pick label="¿A quién le debe?" value={creditor} set={setCreditor} />
+          <div className="grid grid-cols-[1fr_8rem] gap-2">
+            <input className="field" placeholder="Motivo (opcional)" value={concept} onChange={(e) => setConcept(e.target.value)} />
+            <div className="relative">
+              <input className="field pr-7 text-right" inputMode="decimal" placeholder="0,00" value={amount} onChange={(e) => setAmount(e.target.value)} />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">€</span>
+            </div>
+          </div>
+          {debtor && debtor === creditor && <p className="text-sm text-destructive">Elige dos personas distintas.</p>}
+          {valid && <p className="text-sm text-muted-foreground">{g.people.find((p) => p.id === debtor)?.name} debe {eur(num)} a {g.people.find((p) => p.id === creditor)?.name}</p>}
+          <button disabled={!valid} className="btn btn-primary py-4 text-lg">Guardar deuda</button>
+        </div>
+      </form>
+    </div>
   );
 }
 
@@ -224,6 +283,23 @@ function ExpenseForm({ g, initial, onClose, onSave }: { g: Group; initial: Expen
   const num = parseFloat(amount.replace(",", "."));
   const valid = !!date && concept.trim() && num > 0 && paidBy && among.length > 0;
   const allOn = among.length === g.people.length;
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [scanning, setScanning] = useState(false);
+  const scan = useServerFn(scanReceipt);
+  const onScan = async (file: File) => {
+    setScanning(true);
+    try {
+      const image = await shrink(file);
+      const r = await scan({ data: { image } });
+      if ("error" in r) { alert(r.error); return; }
+      if (r.concept) setConcept(r.concept);
+      if (r.total > 0) setAmount(String(r.total).replace(".", ","));
+      if (r.date) setDate(r.date);
+    } catch (e) {
+      console.error(e);
+      alert("No se pudo leer el ticket. Prueba con otra foto.");
+    } finally { setScanning(false); }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/40 sm:items-center" onClick={onClose}>
@@ -237,6 +313,16 @@ function ExpenseForm({ g, initial, onClose, onSave }: { g: Group; initial: Expen
           <button type="button" onClick={onClose} aria-label="Cerrar" className="p-1 text-muted-foreground"><X className="h-5 w-5" /></button>
         </div>
         <div className="flex flex-col gap-4">
+          {!initial && (
+            <>
+              <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden"
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) onScan(f); e.target.value = ""; }} />
+              <button type="button" disabled={scanning} onClick={() => fileRef.current?.click()} className="btn btn-ghost w-full border border-dashed border-primary/40">
+                {scanning ? <Loader2 className="h-5 w-5 animate-spin" /> : <ScanLine className="h-5 w-5" />}
+                {scanning ? "Leyendo ticket…" : "Escanear ticket"}
+              </button>
+            </>
+          )}
           <div className="grid grid-cols-[1fr_8rem] gap-2">
             <input autoFocus className="field" placeholder="Concepto (Cena…)" value={concept} onChange={(e) => setConcept(e.target.value)} />
             <div className="relative">
