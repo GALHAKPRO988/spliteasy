@@ -285,6 +285,7 @@ function ExpenseForm({ g, initial, onClose, onSave }: { g: Group; initial: Expen
   const allOn = among.length === g.people.length;
   const fileRef = useRef<HTMLInputElement>(null);
   const [scanning, setScanning] = useState(false);
+  const [camOpen, setCamOpen] = useState(false);
   const scan = useServerFn(scanReceipt);
   const onScan = async (file: File) => {
     setScanning(true);
@@ -317,10 +318,17 @@ function ExpenseForm({ g, initial, onClose, onSave }: { g: Group; initial: Expen
             <>
               <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden"
                 onChange={(e) => { const f = e.target.files?.[0]; if (f) onScan(f); e.target.value = ""; }} />
-              <button type="button" disabled={scanning} onClick={() => fileRef.current?.click()} className="btn btn-ghost w-full border border-dashed border-primary/40">
+              <button type="button" disabled={scanning} onClick={() => setCamOpen(true)} className="btn btn-ghost w-full border border-dashed border-primary/40">
                 {scanning ? <Loader2 className="h-5 w-5 animate-spin" /> : <ScanLine className="h-5 w-5" />}
                 {scanning ? "Leyendo ticket…" : "Escanear ticket"}
               </button>
+              {camOpen && (
+                <CameraCapture
+                  onCapture={(f) => { setCamOpen(false); onScan(f); }}
+                  onFallback={() => { setCamOpen(false); fileRef.current?.click(); }}
+                  onClose={() => setCamOpen(false)}
+                />
+              )}
             </>
           )}
           <div className="grid grid-cols-[1fr_8rem] gap-2">
@@ -358,6 +366,56 @@ function ExpenseForm({ g, initial, onClose, onSave }: { g: Group; initial: Expen
           <button disabled={!valid} className="btn btn-primary py-4 text-lg">{initial ? "Guardar cambios" : "Añadir gasto"}</button>
         </div>
       </form>
+    </div>
+  );
+}
+
+// Live camera view for scanning tickets: streams the camera and captures a
+// frame as a JPEG File. If the browser blocks camera access, it offers the
+// system camera through the hidden file input instead.
+function CameraCapture({ onCapture, onFallback, onClose }: { onCapture: (f: File) => void; onFallback: () => void; onClose: () => void }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [error, setError] = useState(false);
+  useEffect(() => {
+    let stream: MediaStream | null = null;
+    let cancelled = false;
+    navigator.mediaDevices?.getUserMedia({ video: { facingMode: "environment", width: { ideal: 1920 } }, audio: false })
+      .then((s) => {
+        if (cancelled) { s.getTracks().forEach((t) => t.stop()); return; }
+        stream = s;
+        if (videoRef.current) { videoRef.current.srcObject = s; videoRef.current.play().catch(() => {}); }
+      })
+      .catch(() => { if (!cancelled) setError(true); });
+    return () => { cancelled = true; stream?.getTracks().forEach((t) => t.stop()); };
+  }, []);
+  const shoot = () => {
+    const v = videoRef.current;
+    if (!v || !v.videoWidth) return;
+    const c = document.createElement("canvas");
+    c.width = v.videoWidth; c.height = v.videoHeight;
+    c.getContext("2d")!.drawImage(v, 0, 0);
+    c.toBlob((b) => { if (b) onCapture(new File([b], "ticket.jpg", { type: "image/jpeg" })); }, "image/jpeg", 0.9);
+  };
+  return (
+    <div className="fixed inset-0 z-[60] bg-black">
+      {error ? (
+        <div className="flex h-full flex-col items-center justify-center gap-4 p-6 text-center">
+          <p className="text-lg font-semibold text-white">No se pudo abrir la cámara</p>
+          <p className="text-sm text-white/70">Revisa los permisos o usa la cámara del sistema.</p>
+          <div className="flex gap-3">
+            <button type="button" onClick={onFallback} className="btn btn-primary">Abrir cámara del sistema</button>
+            <button type="button" onClick={onClose} className="btn btn-ghost">Cerrar</button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <video ref={videoRef} playsInline muted className="h-full w-full object-cover" />
+          <button type="button" onClick={onClose} aria-label="Cerrar" className="absolute right-4 top-4 rounded-full bg-black/50 p-2 text-white"><X className="h-6 w-6" /></button>
+          <div className="absolute inset-x-0 bottom-8 flex justify-center">
+            <button type="button" onClick={shoot} aria-label="Hacer foto" className="h-16 w-16 rounded-full border-4 border-white/90 bg-white/30 backdrop-blur" />
+          </div>
+        </>
+      )}
     </div>
   );
 }
