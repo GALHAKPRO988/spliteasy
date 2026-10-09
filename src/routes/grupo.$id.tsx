@@ -43,7 +43,7 @@ function GroupView({ g, save, onDelete }: { g: Group; save: (g: Group) => void; 
   const names = useMemo(() => Object.fromEntries(g.people.map((p) => [p.id, p.name])), [g.people]);
   const balances = computeBalances(g);
   const transfers = computeTransfers(g);
-  const total = g.expenses.reduce((s, e) => s + e.amount, 0);
+  const total = g.expenses.filter((e) => e.kind !== "debt").reduce((s, e) => s + e.amount, 0);
 
   const addPerson = () => {
     const n = newPerson.trim();
