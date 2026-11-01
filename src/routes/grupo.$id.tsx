@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, Plus, X, Pencil, Trash2, Copy, Share2, Check, ArrowRight, RotateCcw, HandCoins, ScanLine, Loader2 } from "lucide-react";
+import { ArrowLeft, Plus, X, Pencil, Trash2, Copy, Share2, Check, ArrowRight, RotateCcw, HandCoins, ScanLine, Loader2, MessageCircle } from "lucide-react";
 import { useGroups, uid, today, eur, computeBalances, computeTransfers, type Group, type Expense } from "@/lib/splits";
 import { scanReceipt } from "@/lib/scan.functions";
 
@@ -39,6 +39,7 @@ function GroupView({ g, save, onDelete }: { g: Group; save: (g: Group) => void; 
   const [newPerson, setNewPerson] = useState("");
   const [editing, setEditing] = useState<Expense | "new" | null>(null);
   const [debtOpen, setDebtOpen] = useState(false);
+  const [editDebt, setEditDebt] = useState<Expense | null>(null);
   const [copied, setCopied] = useState(false);
   const names = useMemo(() => Object.fromEntries(g.people.map((p) => [p.id, p.name])), [g.people]);
   const balances = computeBalances(g);
@@ -116,7 +117,12 @@ function GroupView({ g, save, onDelete }: { g: Group; save: (g: Group) => void; 
                 </div>
               </div>
               <div className="font-display text-lg font-extrabold">{eur(e.amount)}</div>
-              {e.kind !== "debt" && <button aria-label="Editar" onClick={() => setEditing(e)} className="p-1 text-muted-foreground hover:text-primary"><Pencil className="h-4 w-4" /></button>}
+              {e.kind === "debt" && (
+                <a aria-label="Recordar por WhatsApp" target="_blank" rel="noreferrer"
+                  href={`https://wa.me/?text=${encodeURIComponent(`¡Hola ${names[e.splitAmong[0]!]}! Te recuerdo que me debes ${eur(e.amount)}${e.concept && e.concept !== "Deuda" ? ` (${e.concept})` : ""} del grupo "${g.name}". ¡Gracias! — ${names[e.paidBy]}`)}`}
+                  className="p-1 text-muted-foreground hover:text-primary"><MessageCircle className="h-4 w-4" /></a>
+              )}
+              <button aria-label="Editar" onClick={() => (e.kind === "debt" ? setEditDebt(e) : setEditing(e))} className="p-1 text-muted-foreground hover:text-primary"><Pencil className="h-4 w-4" /></button>
               <button aria-label="Eliminar" onClick={() => confirm("¿Eliminar este gasto?") && save({ ...g, expenses: g.expenses.filter((x) => x.id !== e.id) })} className="p-1 text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></button>
             </div>
           ))}
@@ -212,9 +218,13 @@ function GroupView({ g, save, onDelete }: { g: Group; save: (g: Group) => void; 
         />
       )}
 
-      {debtOpen && (
-        <DebtForm g={g} onClose={() => setDebtOpen(false)}
-          onSave={(e) => { save({ ...g, expenses: [...g.expenses, e] }); setDebtOpen(false); }} />
+      {(debtOpen || editDebt) && (
+        <DebtForm g={g} initial={editDebt} onClose={() => { setDebtOpen(false); setEditDebt(null); }}
+          onSave={(e) => {
+            const exists = g.expenses.some((x) => x.id === e.id);
+            save({ ...g, expenses: exists ? g.expenses.map((x) => (x.id === e.id ? e : x)) : [...g.expenses, e] });
+            setDebtOpen(false); setEditDebt(null);
+          }} />
       )}
     </main>
   );
@@ -231,11 +241,11 @@ async function shrink(file: File): Promise<string> {
 }
 
 // A debt "A owes B X€" is stored as an expense paid by B and split only to A.
-function DebtForm({ g, onClose, onSave }: { g: Group; onClose: () => void; onSave: (e: Expense) => void }) {
-  const [debtor, setDebtor] = useState(g.people[0]?.id ?? "");
-  const [creditor, setCreditor] = useState(g.people[1]?.id ?? "");
-  const [amount, setAmount] = useState("");
-  const [concept, setConcept] = useState("");
+function DebtForm({ g, initial, onClose, onSave }: { g: Group; initial?: Expense | null; onClose: () => void; onSave: (e: Expense) => void }) {
+  const [debtor, setDebtor] = useState(initial?.splitAmong[0] ?? g.people[0]?.id ?? "");
+  const [creditor, setCreditor] = useState(initial?.paidBy ?? g.people[1]?.id ?? "");
+  const [amount, setAmount] = useState(initial ? String(initial.amount) : "");
+  const [concept, setConcept] = useState(initial && initial.concept !== "Deuda" ? initial.concept : "");
   const num = parseFloat(amount.replace(",", "."));
   const valid = debtor && creditor && debtor !== creditor && num > 0;
   const Pick = ({ value, set, label }: { value: string; set: (v: string) => void; label: string }) => (
@@ -249,10 +259,10 @@ function DebtForm({ g, onClose, onSave }: { g: Group; onClose: () => void; onSav
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/40 sm:items-center" onClick={onClose}>
       <form onClick={(e) => e.stopPropagation()}
-        onSubmit={(e) => { e.preventDefault(); if (valid) onSave({ id: uid(), kind: "debt", concept: concept.trim() || "Deuda", amount: Math.round(num * 100) / 100, paidBy: creditor, splitAmong: [debtor], date: today() }); }}
+        onSubmit={(e) => { e.preventDefault(); if (valid) onSave({ id: initial?.id ?? uid(), kind: "debt", concept: concept.trim() || "Deuda", amount: Math.round(num * 100) / 100, paidBy: creditor, splitAmong: [debtor], date: initial?.date ?? today() }); }}
         className="max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-t-3xl bg-card p-5 sm:rounded-3xl">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-2xl font-extrabold">Apuntar una deuda</h2>
+          <h2 className="text-2xl font-extrabold">{initial ? "Editar deuda" : "Apuntar una deuda"}</h2>
           <button type="button" onClick={onClose} aria-label="Cerrar" className="p-1 text-muted-foreground"><X className="h-5 w-5" /></button>
         </div>
         <div className="flex flex-col gap-4">
