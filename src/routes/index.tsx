@@ -87,12 +87,8 @@ function Home() {
         </ol>
       </section>
       <section className="mt-10 rounded-2xl border border-dashed border-primary/40 p-5">
-        <div className="flex items-center gap-2 font-semibold text-primary"><Github className="h-5 w-5" />Open source y selfhosteable</div>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Sin cuentas, sin anuncios, sin servicios externos. Instálalo en tu propio servidor con un solo
-          <code className="mx-1 rounded bg-secondary px-1.5 py-0.5 text-xs">docker compose up -d</code>
-          y tus datos se quedan contigo.
-        </p>
+        <div className="flex items-center gap-2 font-semibold text-primary"><Github className="h-5 w-5" />Open source</div>
+        <p className="mt-1 text-sm text-muted-foreground">Sin cuentas y sin anuncios. El código es libre y está disponible para todos.</p>
       </section>
     </main>
   );
