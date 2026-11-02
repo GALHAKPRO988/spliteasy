@@ -10,7 +10,5 @@
 <!-- LOVABLE:END -->
 
 ## Architecture
-- `src/lib/db.server.ts` stores groups in the Cloud `groups` table (server-only, service role) when SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY exist, else a JSON file in DATA_DIR — self-hosting stays dependency-free. Access only via `src/lib/groups.functions.ts`.
-- No accounts: each device keeps its group ids in localStorage and lists only those; opening a group link adds it — privacy without login.
-- Self-hosting builds with `NITRO_PRESET=node-server` (see Dockerfile) — the default build targets the edge, which has no persistent disk.
-- APK "direct mode": when VITE_DIRECT_SUPABASE_URL/KEY are set, `src/lib/direct.ts` replaces server functions with RPCs to the user's own project (SQL in docs/apk-supabase.sql) — lets a static Capacitor build work without a server.
+- Groups live only in the device's localStorage (`src/lib/splits.ts` useGroups, key `spliteasy:data`); no database or server storage — fully local, works offline and in a static APK.
+- The receipt scanner is the only server function (`src/lib/scan.functions.ts`, AI gateway).
