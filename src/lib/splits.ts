@@ -1,8 +1,4 @@
-import { useCallback } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
-import { listGroups, saveGroup, deleteGroup } from "./groups.functions";
-import { direct, directMode } from "./direct";
+import { useCallback, useEffect, useState } from "react";
 
 export type Expense = { id: string; concept: string; amount: number; paidBy: string; splitAmong: string[]; date: string; kind?: "debt" };
 export type Group = { id: string; name: string; people: { id: string; name: string }[]; expenses: Expense[]; settled: string[]; createdAt: number };
@@ -11,57 +7,42 @@ export const uid = () =>
   Array.from(crypto.getRandomValues(new Uint8Array(8)), (b: number) => (b % 36).toString(36)).join("");
 export const today = () => new Date().toISOString().slice(0, 10);
 
-const QK = ["groups"];
-const LS = "spliteasy:groups";
+// Everything lives on this device only (localStorage). No server, no database.
+const LS = "spliteasy:data";
+const EVT = "spliteasy:change";
 
-// Group ids this device has created or opened. Only these are listed.
-function myIds(): string[] {
-  try { return JSON.parse(localStorage.getItem(LS) || "[]"); } catch { return []; }
+function readAll(): Group[] {
+  try {
+    const v = JSON.parse(localStorage.getItem(LS) || "[]");
+    return Array.isArray(v) ? v : [];
+  } catch { return []; }
 }
-function setIds(ids: string[]) {
-  localStorage.setItem(LS, JSON.stringify([...new Set(ids)]));
+function writeAll(gs: Group[]) {
+  localStorage.setItem(LS, JSON.stringify(gs));
+  window.dispatchEvent(new Event(EVT));
 }
 
 export function useGroups() {
-  const qc = useQueryClient();
-  const listS = useServerFn(listGroups);
-  const saveS = useServerFn(saveGroup);
-  const delS = useServerFn(deleteGroup);
-  const list = directMode ? (a: { data: { ids: string[] } }) => direct.list(a.data.ids) : listS;
-  const saveFn = directMode ? (a: { data: Group }) => direct.save(a.data) : saveS;
-  const delFn = directMode ? (a: { data: { id: string } }) => direct.remove(a.data.id) : delS;
-  const { data } = useQuery({ queryKey: QK, queryFn: () => list({ data: { ids: myIds() } }) });
-  const track = useCallback(
-    (id: string) => {
-      if (myIds().includes(id)) return;
-      setIds([...myIds(), id]);
-      qc.invalidateQueries({ queryKey: QK });
-    },
-    [qc],
-  );
-  const save = useCallback(
-    (g: Group) => {
-      if (!myIds().includes(g.id)) setIds([...myIds(), g.id]);
-      qc.setQueryData<Group[]>(QK, (old = []) =>
-        old.some((x) => x.id === g.id) ? old.map((x) => (x.id === g.id ? g : x)) : [g, ...old],
-      );
-      return saveFn({ data: g }).catch((e) => {
-        alert("No se pudo guardar. Revisa los datos.");
-        console.error(e);
-        qc.invalidateQueries({ queryKey: QK });
-      });
-    },
-    [qc, saveFn],
-  );
-  const remove = useCallback(
-    (id: string) => {
-      setIds(myIds().filter((x) => x !== id));
-      qc.setQueryData<Group[]>(QK, (old = []) => old.filter((g) => g.id !== id));
-      return delFn({ data: { id } }).finally(() => qc.invalidateQueries({ queryKey: QK }));
-    },
-    [qc, delFn],
-  );
-  return { groups: data ?? null, save, remove, track };
+  const [groups, setGroups] = useState<Group[] | null>(null);
+  useEffect(() => {
+    const sync = () => setGroups(readAll().sort((a, b) => b.createdAt - a.createdAt));
+    sync();
+    window.addEventListener(EVT, sync);
+    window.addEventListener("storage", sync);
+    return () => { window.removeEventListener(EVT, sync); window.removeEventListener("storage", sync); };
+  }, []);
+  const track = useCallback((_id: string) => {}, []);
+  const save = useCallback(async (g: Group) => {
+    const all = readAll();
+    const i = all.findIndex((x) => x.id === g.id);
+    if (i >= 0) all[i] = g; else all.unshift(g);
+    writeAll(all);
+    return g;
+  }, []);
+  const remove = useCallback(async (id: string) => {
+    writeAll(readAll().filter((g) => g.id !== id));
+  }, []);
+  return { groups, save, remove, track };
 }
 
 export const eur = (n: number) =>
