@@ -10,20 +10,6 @@ La forma principal de utilizar SplitEasy es **descargar el APK e instalarlo dire
 
 Las versiones disponibles de la aplicación se publican en **[GitHub Releases](../../releases)**, donde puedes descargar el APK de la versión que quieras.
 
-También puedes utilizar SplitEasy como aplicación web. Puedes desplegarla en un servidor y acceder a ella desde **cualquier dispositivo y desde cualquier lugar**, siempre que tengas acceso al servidor.
-
-```text
-                SplitEasy
-                   │
-        ┌──────────┴──────────┐
-        ↓                     ↓
-   APK Android            Aplicación web
-        ↓                     ↓
-     Teléfono          Cualquier dispositivo
-```
-
-El proyecto completo está disponible en GitHub.
-
 ---
 
 ## Funcionalidades
@@ -31,6 +17,8 @@ El proyecto completo está disponible en GitHub.
 * Grupos con nombre y participantes (solo nombre, sin cuentas).
 * Gastos con concepto, importe, fecha, quién pagó y entre quiénes se divide (todos o algunos).
 * Editar y eliminar gastos.
+* Escaner de tickets
+* Agenda de deudas
 * Eliminar personas sin gastos asociados.
 * Balance por persona: cuánto pagó, cuánto le tocaba y su saldo.
 * **Quién paga a quién**, simplificando las deudas al máximo.
